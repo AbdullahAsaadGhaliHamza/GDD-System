@@ -1,0 +1,18 @@
+{
+  "name": "gdd-living-template",
+  "version": "1.0.0",
+  "description": "Markdown + YAML hybrid Game Design Document system. Version-control friendly, links design decisions to implementation status.",
+  "main": "core/parser.js",
+  "scripts": {
+    "build": "node tools/build.js --all",
+    "report": "node tools/build.js --report",
+    "watch": "node tools/build.js --all --watch",
+    "ci": "node tools/build.js --ci",
+    "examples": "node examples.js"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "engines": { "node": ">=14.0.0" },
+  "license": "MIT"
+}

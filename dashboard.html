@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GDD Living Template</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161b25;--bg3:#1e2533;--bg4:#252d3d;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b919e;--text3:#555e6e;
+  --accent:#378ADD;--abg:rgba(55,138,221,0.12);
+  --done:#43a047;--inprog:#f4a800;--planned:#1e88e5;
+  --blocked:#e53935;--cut:#78909c;--review:#8e24aa;
+  --r:8px;--rl:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+.topbar{height:46px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0}
+.logo{font-size:14px;font-weight:600;letter-spacing:-0.01em}
+.sep{width:1px;height:18px;background:var(--border2)}
+.game-chip{font-size:12px;color:var(--text2)}
+.topbar-right{margin-left:auto;display:flex;gap:7px;align-items:center}
+
+.layout{display:grid;grid-template-columns:260px 1fr 300px;flex:1;overflow:hidden}
+.panel{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rpanel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+
+.ps{padding:11px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ps-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.scroll{overflow-y:auto;flex:1}
+.scroll::-webkit-scrollbar{width:4px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:11px;color:var(--text2)}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-size:12px;padding:5px 8px;outline:none;transition:border-color 0.12s;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--bg3)}
+textarea{resize:vertical;font-family:"SF Mono","Fira Code",monospace;font-size:11px;line-height:1.6;min-height:80px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+.btn{font-size:11px;font-weight:500;padding:6px 10px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:background 0.1s;white-space:nowrap}
+.btn:hover{background:var(--bg3)}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#2a74c7}
+.btn-sm{padding:4px 8px;font-size:10px}
+.btn-danger{border-color:rgba(229,57,53,0.4);color:#ef9a9a}
+.btn-danger:hover{background:rgba(229,57,53,0.12)}
+.btn-row{display:flex;gap:5px;flex-wrap:wrap}
+
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.badge{font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap;text-transform:uppercase;letter-spacing:0.05em}
+.s-done{color:var(--done);background:rgba(67,160,71,0.15);border:1px solid rgba(67,160,71,0.3)}
+.s-in_progress{color:var(--inprog);background:rgba(244,168,0,0.15);border:1px solid rgba(244,168,0,0.3)}
+.s-planned{color:var(--planned);background:rgba(30,136,229,0.15);border:1px solid rgba(30,136,229,0.3)}
+.s-blocked{color:var(--blocked);background:rgba(229,57,53,0.15);border:1px solid rgba(229,57,53,0.3)}
+.s-cut{color:var(--cut);background:rgba(120,144,156,0.15);border:1px solid rgba(120,144,156,0.3)}
+.s-review{color:var(--review);background:rgba(142,36,170,0.15);border:1px solid rgba(142,36,170,0.3)}
+
+.section-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);cursor:pointer;transition:background 0.08s;margin-bottom:2px}
+.section-row:hover{background:var(--bg3)}
+.section-row.selected{background:var(--bg4);border-left:2px solid var(--accent)}
+.section-name{font-size:12px;color:var(--text);flex:1}
+.section-owner{font-size:10px;color:var(--text3)}
+
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;flex-shrink:0}
+.tab{font-size:11px;font-weight:500;color:var(--text3);padding:10px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.1s}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+
+.tab-content{display:none;flex:1;overflow:hidden;flex-direction:column}
+.tab-content.active{display:flex}
+
+.dashboard-area{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.dashboard-area::-webkit-scrollbar{width:6px}
+.dashboard-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px}
+.metric-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:600;color:var(--text)}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:2px}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+
+.progress-bar{height:8px;border-radius:4px;background:var(--bg3);overflow:hidden;display:flex}
+.prog-seg{height:100%}
+
+.milestone-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.milestone-row:last-child{border-bottom:none}
+.milestone-name{font-size:12px;font-weight:500;color:var(--text);flex:1}
+.milestone-date{font-size:11px;color:var(--text3)}
+.milestone-days{font-size:11px;font-weight:600;min-width:70px;text-align:right}
+.days-ok{color:var(--planned)}
+.days-soon{color:var(--inprog)}
+.days-urgent{color:var(--blocked)}
+
+.feature-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r);cursor:pointer;transition:background 0.08s}
+.feature-row:hover{background:var(--bg3)}
+.feature-name{font-size:12px;color:var(--text);flex:1}
+.feature-meta{font-size:10px;color:var(--text3)}
+
+.oq-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.oq-row:last-child{border-bottom:none}
+.oq-id{font-size:10px;font-family:monospace;color:var(--text3);min-width:50px}
+.oq-text{font-size:12px;color:var(--text);flex:1}
+.oq-meta{font-size:10px;color:var(--text3);margin-top:2px}
+
+.editor-area{flex:1;overflow:auto;padding:14px}
+.editor-area::-webkit-scrollbar{width:4px}
+.editor-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+#yamlEditor,#mdEditor{width:100%;font-family:"SF Mono","Fira Code",monospace;font-size:11px;line-height:1.7;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);padding:12px;resize:vertical;outline:none;min-height:300px}
+#yamlEditor:focus,#mdEditor:focus{border-color:var(--accent)}
+
+.preview-area{flex:1;overflow:auto;padding:20px 24px;max-width:800px;margin:0 auto;width:100%}
+.preview-area::-webkit-scrollbar{width:6px}
+.preview-area::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.preview-area h1{font-size:26px;font-weight:700;color:var(--text);margin:32px 0 14px}
+.preview-area h2{font-size:20px;font-weight:600;color:var(--text);margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.preview-area h3{font-size:16px;font-weight:600;color:var(--text);margin:20px 0 8px}
+.preview-area h4{font-size:13px;font-weight:600;color:var(--text2);margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.05em}
+.preview-area p{color:var(--text2);margin:0 0 14px;line-height:1.75}
+.preview-area strong{color:var(--text);font-weight:600}
+.preview-area em{color:var(--text2);font-style:italic}
+.preview-area blockquote{border-left:3px solid var(--accent);padding:8px 14px;margin:12px 0;background:rgba(55,138,221,0.08);border-radius:0 6px 6px 0}
+.preview-area blockquote p{margin:0}
+.preview-area code{font-family:monospace;font-size:11px;background:var(--bg3);padding:2px 5px;border-radius:4px;border:1px solid var(--border2);color:#90caf9}
+.preview-area pre{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin:12px 0;overflow-x:auto}
+.preview-area pre code{background:none;border:none;padding:0;font-size:12px;color:#e0e0e0}
+.preview-area table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+.preview-area th{padding:7px 10px;background:var(--bg3);border-bottom:2px solid var(--border2);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;text-align:left}
+.preview-area td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+.preview-area tr:last-child td{border-bottom:none}
+.preview-area ul{padding-left:18px;margin:8px 0}
+.preview-area li{color:var(--text2);margin-bottom:3px;line-height:1.6}
+.preview-area hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+.preview-area a{color:var(--accent)}
+.status-badge-inline{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;white-space:nowrap}
+
+.info-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.info-card-title{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px;font-weight:600}
+.info-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px}
+.info-row:last-child{border-bottom:none}
+.info-row-label{color:var(--text3)}
+.info-row-val{color:var(--text);font-weight:500}
+
+.task-list{display:flex;flex-direction:column;gap:4px}
+.task-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+.task-item:last-child{border-bottom:none}
+.task-check{font-size:12px;flex-shrink:0;margin-top:1px}
+.task-text{font-size:11px;color:var(--text2);flex:1}
+.task-text.done{color:var(--text3);text-decoration:line-through}
+
+.saved-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;cursor:pointer}
+.saved-item:hover{border-color:var(--border2)}
+.saved-item-info{flex:1}
+.saved-item-name{font-size:12px;font-weight:500;color:var(--text)}
+.saved-item-meta{font-size:10px;color:var(--text3);margin-top:2px}
+
+.empty-state{text-align:center;color:var(--text3);font-size:12px;padding:24px 16px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-size:12px;padding:8px 16px;border-radius:20px;opacity:0;transition:opacity 0.18s,transform 0.18s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.section-editor-form{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">GDD Living Template</span>
+  <div class="sep"></div>
+  <span class="game-chip" id="tbGameTitle">No GDD loaded</span>
+  <div class="topbar-right">
+    <button class="btn btn-sm" onclick="exportHTML()">HTML</button>
+    <button class="btn btn-sm" onclick="exportJSON()">JSON</button>
+    <button class="btn btn-sm" onclick="exportCSV()">CSV</button>
+    <button class="btn btn-sm" onclick="exportMarkdown()">MD</button>
+    <button class="btn btn-sm btn-primary" onclick="saveGDD()">Save</button>
+    <button class="btn btn-sm" onclick="loadFile()">Load</button>
+    <input type="file" id="fileInput" accept=".md,.yaml,.yml,.json" style="display:none" onchange="onFileLoad(event)"/>
+  </div>
+</div>
+
+<div class="layout">
+
+  <div class="panel">
+    <div class="ps">
+      <div class="ps-title">Document</div>
+      <div class="btn-row">
+        <button class="btn btn-sm" onclick="loadExample()">Load example</button>
+        <button class="btn btn-sm" onclick="newGDD()">New GDD</button>
+      </div>
+    </div>
+
+    <div class="ps" style="flex-shrink:0">
+      <div class="ps-title">Sections <span id="sectionCount" style="color:var(--text3);font-weight:400"></span></div>
+      <input type="text" id="sectionSearch" placeholder="Search..." oninput="renderSectionList()" style="margin-bottom:0"/>
+    </div>
+
+    <div class="scroll" style="flex:1" id="sectionListWrap"></div>
+
+    <div class="ps" style="flex-shrink:0">
+      <div class="ps-title">Add section</div>
+      <div class="field"><label>Title</label><input type="text" id="addSecTitle" placeholder="My Section"/></div>
+      <div class="row2">
+        <div class="field"><label>Owner</label><input type="text" id="addSecOwner" placeholder="Name"/></div>
+        <div class="field"><label>Status</label>
+          <select id="addSecStatus">
+            <option value="planned">Planned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addSection()" style="width:100%">Add section</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('dashboard',this)">Dashboard</div>
+      <div class="tab" onclick="switchTab('preview',this)">Preview</div>
+      <div class="tab" onclick="switchTab('editor',this)">MD Editor</div>
+      <div class="tab" onclick="switchTab('yaml',this)">YAML / Meta</div>
+      <div class="tab" onclick="switchTab('saved',this)">Saved</div>
+    </div>
+
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="dashboard-area" id="dashboardArea">
+        <div class="empty-state">Load a GDD to see the dashboard.</div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-preview">
+      <div class="preview-area" id="previewArea">
+        <div class="empty-state">Load a GDD to see the preview.</div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-editor">
+      <div class="editor-area">
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+          <span style="font-size:11px;color:var(--text2)">Markdown body editor</span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="btn btn-sm" onclick="applyMD()">Apply</button>
+            <button class="btn btn-sm" onclick="copyMD()">Copy</button>
+          </div>
+        </div>
+        <textarea id="mdEditor" rows="40" oninput="mdDirty=true"></textarea>
+        <div id="mdError" style="font-size:11px;color:var(--danger);margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-yaml">
+      <div class="editor-area">
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+          <span style="font-size:11px;color:var(--text2)">YAML front matter editor</span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="btn btn-sm" onclick="applyYAML()">Apply</button>
+            <button class="btn btn-sm" onclick="formatYAML()">Format</button>
+          </div>
+        </div>
+        <textarea id="yamlEditor" rows="40" oninput="yamlDirty=true"></textarea>
+        <div id="yamlError" style="font-size:11px;color:var(--danger);margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-saved">
+      <div style="padding:12px 14px;flex:1;overflow:auto" id="savedArea">
+        <div class="empty-state">No saved GDDs yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rpanel">
+    <div class="ps" style="flex-shrink:0">
+      <div class="ps-title">Section editor</div>
+      <div style="font-size:11px;color:var(--text3)" id="editorHint">Click a section to edit it.</div>
+    </div>
+    <div class="scroll" style="flex:1" id="sectionEditorWrap"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STATUS_COLORS={done:"#43a047",in_progress:"#f4a800",planned:"#1e88e5",blocked:"#e53935",cut:"#78909c",review:"#8e24aa"};
+const STATUS_LABELS={done:"Done",in_progress:"In Progress",planned:"Planned",blocked:"Blocked",cut:"Cut",review:"In Review"};
+const STATUS_SYMBOLS={done:"+",in_progress:"~",planned:"o",blocked:"!",cut:"x",review:"?"};
+
+let state={
+  meta:{},
+  body:"",
+  sections:[],
+  features:[],
+  tasks:[],
+  open_questions:[],
+  saved:[],
+  selectedSection:null
+};
+let mdDirty=false, yamlDirty=false;
+
+const EXAMPLE_GDD=`---
+gdd_version: "1.0.0"
+schema_version: "1.0.0"
+last_updated: "2025-01-15"
+game:
+  title: "Echo Veil"
+  tagline: "A puzzle-platformer set inside a collapsing memory palace."
+  genre:
+    - puzzle-platformer
+    - atmospheric
+  platform:
+    - PC
+    - Nintendo Switch
+  engine: "Godot 4.3"
+  target_rating: "E10+"
+  expected_playtime: "6-8 hours"
+  monetization_model: "premium"
+team:
+  studio: "Hollow Echo Studio"
+  size: "small"
+milestones:
+  - id: M1
+    name: Vertical Slice
+    target_date: "2025-06-01"
+    status: in_progress
+    description: Fully playable first chapter.
+  - id: M2
+    name: Alpha
+    target_date: "2025-10-01"
+    status: planned
+    description: All content complete.
+  - id: M3
+    name: Gold
+    target_date: "2026-01-01"
+    status: planned
+    description: Final release build.
+sections:
+  - id: overview
+    title: Game Overview
+    owner: Sam Torres
+    status: done
+  - id: core_loop
+    title: Core Game Loop
+    owner: Sam Torres
+    status: done
+  - id: mechanics
+    title: Mechanics & Systems
+    owner: Priya Nair
+    status: in_progress
+  - id: narrative
+    title: Narrative & World
+    owner: Lena Booth
+    status: in_progress
+  - id: technical
+    title: Technical Design
+    owner: Priya Nair
+    status: planned
+---
+
+# Echo Veil - Game Design Document
+
+## Game Overview
+
+<!-- status: done | owner: Sam Torres | updated: 2025-01-10 -->
+
+**Echo Veil** is a hand-painted 2.5D puzzle-platformer set inside the collapsing memory palace of a woman who cannot remember who she is.
+
+| Field | Value |
+|-------|-------|
+| Genre | Puzzle-platformer |
+| Platform | PC, Nintendo Switch |
+| Engine | Godot 4.3 |
+
+### Elevator Pitch
+
+> A puzzle-platformer set inside a collapsing memory palace.
+
+## Core Game Loop
+
+<!-- status: done | owner: Sam Torres | updated: 2025-01-10 -->
+
+Enter room -> Observe echoes -> Solve puzzle -> Recover memory -> Next room.
+
+**Micro loop:** Observe, experiment, solve (30s - 3 min).
+
+**Macro loop:** Reconstruct identity, reach the core, make the final choice.
+
+## Mechanics & Systems
+
+<!-- status: in_progress | owner: Priya Nair | updated: 2025-01-12 -->
+
+### Echo System
+
+<!-- feature_status: in_progress | milestone: M1 | priority: critical -->
+
+The core mechanic. Players pick up, place, and rewind echoes of past events.
+
+| Action | Status |
+|--------|--------|
+| Pick up echo | \`~ in_progress\` |
+| Place echo | \`~ in_progress\` |
+| Rewind echo | \`o planned\` |
+
+### Movement
+
+<!-- feature_status: done | milestone: M1 | priority: critical -->
+
+Standard 2D platformer. Walk: 180px/s. Run: 280px/s. Jump: 96px.
+
+## Narrative & World
+
+<!-- status: in_progress | owner: Lena Booth | updated: 2025-01-13 -->
+
+The protagonist Mara wakes inside a palace made of her own memories.
+
+| Character | Status |
+|-----------|--------|
+| Mara | \`~ in_progress\` |
+| The Echo | \`~ in_progress\` |
+
+## Technical Design
+
+<!-- status: planned | owner: Priya Nair | updated: 2025-01-14 -->
+
+### Architecture
+
+| System | Status |
+|--------|--------|
+| Scene management | \`+ done\` |
+| Save system | \`~ in_progress\` |
+| Echo recording | \`~ in_progress\` |
+| Dialogue system | \`o planned\` |
+
+### M1 Checklist
+
+- [ ] Chapter 1 fully playable
+- [ ] Echo pickup and placement working
+- [x] Movement finalized
+- [ ] Steam page live
+
+---
+
+*This document is the living source of truth for Echo Veil.*`;
+
+function parseFrontmatter(raw) {
+  const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) return { meta: {}, body: raw };
+  try {
+    const meta = jsyaml.load(match[1]) || {};
+    return { meta, body: match[2] };
+  } catch(e) {
+    return { meta: {}, body: raw };
+  }
+}
+
+function extractSections(body, meta) {
+  const sections = [];
+  const h2Regex = /^## (.+)$/gm;
+  const commentRegex = /<!--\s*status:\s*(\w+)\s*\|?\s*(?:owner:\s*([^|]+?)\s*\|?)?\s*(?:updated:\s*([\d-]+)\s*)?\s*-->/;
+  let match;
+  while ((match = h2Regex.exec(body)) !== null) {
+    const title = match[1].trim();
+    const pos = match.index;
+    const nextPos = body.indexOf("\n## ", pos + 1);
+    const slice = body.slice(pos, nextPos > -1 ? nextPos : undefined);
+    const cm = slice.match(commentRegex);
+    const ms = (meta.sections || []).find(s => s.title === title);
+    sections.push({
+      title, position: pos,
+      status: cm?.[1] || ms?.status || "unknown",
+      owner: cm?.[2]?.trim() || ms?.owner || null,
+      updated: cm?.[3]?.trim() || null,
+      word_count: slice.split(/\s+/).filter(Boolean).length,
+      id: ms?.id || title.toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+      body_slice: slice
+    });
+  }
+  return sections;
+}
+
+function extractFeatures(body) {
+  const features = [];
+  const fRe = /<!--\s*feature_status:\s*(\w+)\s*\|?\s*(?:milestone:\s*(\w+)\s*\|?)?\s*(?:priority:\s*(\w+)\s*)?\s*-->/g;
+  let m;
+  while ((m = fRe.exec(body)) !== null) {
+    const beforePos = body.lastIndexOf("### ", m.index);
+    let name = "Unknown Feature";
+    if (beforePos > -1) {
+      const line = body.slice(beforePos, body.indexOf("\n", beforePos));
+      name = line.replace(/^### /, "").trim();
+    }
+    features.push({ name, status: m[1], milestone: m[2]||null, priority: m[3]||null });
+  }
+  return features;
+}
+
+function extractTasks(body) {
+  const tasks = [];
+  const re = /^-\s+\[([x ])\]\s+(.+)$/gm;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    tasks.push({ done: m[1].toLowerCase() === "x", text: m[2].trim() });
+  }
+  return tasks;
+}
+
+function extractOpenQuestions(body) {
+  const oqs = [];
+  const re = /\|\s*(OQ-\d+)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/g;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    oqs.push({ id: m[1].trim(), question: m[2].trim(), owner: m[3].trim(), deadline: m[4].trim(), status_raw: m[5].trim() });
+  }
+  return oqs;
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const t = new Date(dateStr);
+  const n = new Date();
+  return Math.ceil((t - n) / (86400000));
+}
+
+function parseGDD(raw) {
+  const { meta, body } = parseFrontmatter(raw);
+  const sections = extractSections(body, meta);
+  const features = extractFeatures(body);
+  const tasks = extractTasks(body);
+  const oqs = extractOpenQuestions(body);
+  const milestones = (meta.milestones || []).map(m => ({ ...m, days_until: daysUntil(m.target_date) }));
+  state.meta = meta;
+  state.body = body;
+  state.sections = sections;
+  state.features = features;
+  state.tasks = tasks;
+  state.open_questions = oqs;
+  state.milestones = milestones;
+  refreshAll();
+}
+
+function serializeGDD() {
+  const yamlStr = jsyaml.dump(state.meta, { lineWidth: 120, quotingType: '"' });
+  return `---\n${yamlStr}---\n${state.body}`;
+}
+
+function refreshAll() {
+  const game = state.meta.game || {};
+  document.getElementById("tbGameTitle").textContent = game.title || "Untitled GDD";
+  renderSectionList();
+  renderDashboard();
+  renderPreview();
+  syncEditors();
+}
+
+function renderSectionList() {
+  const filter = document.getElementById("sectionSearch").value.toLowerCase();
+  const el = document.getElementById("sectionListWrap");
+  const secs = state.sections.filter(s =>
+    s.title.toLowerCase().includes(filter) || (s.owner||"").toLowerCase().includes(filter)
+  );
+  document.getElementById("sectionCount").textContent = `(${state.sections.length})`;
+  el.innerHTML = '<div style="padding:6px 8px">' + secs.map(s => {
+    const color = STATUS_COLORS[s.status] || "#555";
+    const sel = state.selectedSection === s.id ? " selected" : "";
+    return `<div class="section-row${sel}" onclick="selectSection('${s.id}')">
+      <div class="status-dot" style="background:${color}"></div>
+      <span class="section-name">${s.title}</span>
+      <span class="section-owner">${s.owner||""}</span>
+    </div>`;
+  }).join("") + "</div>";
+}
+
+function renderDashboard() {
+  const el = document.getElementById("dashboardArea");
+  if (!state.meta.game) { el.innerHTML = '<div class="empty-state">Load a GDD to see the dashboard.</div>'; return; }
+
+  const game = state.meta.game || {};
+  const tasks = state.tasks;
+  const tasksDone = tasks.filter(t => t.done).length;
+  const tasksPct = tasks.length > 0 ? Math.round(tasksDone / tasks.length * 100) : 0;
+
+  const sTotal = state.sections.length;
+  const sByS = {};
+  for (const s of state.sections) sByS[s.status] = (sByS[s.status]||0)+1;
+
+  const progBar = Object.entries(STATUS_COLORS).filter(([k]) => sByS[k]).map(([k,c]) => {
+    const pct = (sByS[k] / sTotal * 100).toFixed(1);
+    return `<div class="prog-seg" style="width:${pct}%;background:${c}" title="${STATUS_LABELS[k]}: ${sByS[k]}"></div>`;
+  }).join("");
+
+  const nextM = (state.milestones || []).find(m => m.status !== "done" && m.days_until !== null);
+
+  const milestonesHtml = (state.milestones || []).map(m => {
+    const color = STATUS_COLORS[m.status] || "#555";
+    const daysStr = m.days_until !== null
+      ? m.days_until > 0 ? `+${m.days_until}d` : `OVERDUE`
+      : "";
+    const daysClass = m.days_until < 0 ? "days-urgent" : m.days_until < 30 ? "days-soon" : "days-ok";
+    return `<div class="milestone-row">
+      <div class="status-dot" style="background:${color}"></div>
+      <span class="milestone-name">${m.name}</span>
+      <span class="milestone-date">${m.target_date||""}</span>
+      <span class="milestone-days ${daysClass}">${daysStr}</span>
+    </div>`;
+  }).join("");
+
+  const featuresHtml = state.features.map(f => {
+    const color = STATUS_COLORS[f.status] || "#555";
+    return `<div class="feature-row">
+      <div class="status-dot" style="background:${color}"></div>
+      <span class="feature-name">${f.name}</span>
+      <span class="feature-meta">${f.milestone||""} ${f.priority ? "· "+f.priority : ""}</span>
+      <span class="badge s-${f.status}">${STATUS_LABELS[f.status]||f.status}</span>
+    </div>`;
+  }).join("") || '<div class="empty-state" style="padding:8px 0">No features tagged</div>';
+
+  const tasksHtml = tasks.slice(0, 12).map(t => `<div class="task-item">
+    <span class="task-check">${t.done ? "✓" : "○"}</span>
+    <span class="task-text ${t.done?"done":""}">${t.text}</span>
+  </div>`).join("") || '<div class="empty-state" style="padding:8px 0">No checklist items</div>';
+
+  const oqsHtml = state.open_questions.slice(0, 6).map(q => `<div class="oq-row">
+    <span class="oq-id">${q.id}</span>
+    <div style="flex:1"><div class="oq-text">${q.question}</div><div class="oq-meta">${q.owner} · ${q.deadline}</div></div>
+  </div>`).join("") || '<div class="empty-state" style="padding:8px 0">No open questions tagged</div>';
+
+  el.innerHTML = `
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Sections</div><div class="metric-val">${sTotal}</div></div>
+    <div class="metric"><div class="metric-label">Tasks done</div><div class="metric-val">${tasksPct}%</div><div class="metric-sub">${tasksDone}/${tasks.length}</div></div>
+    <div class="metric"><div class="metric-label">Features</div><div class="metric-val">${state.features.length}</div></div>
+    <div class="metric"><div class="metric-label">Open Qs</div><div class="metric-val">${state.open_questions.length}</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Section progress</div>
+    <div class="progress-bar" style="margin-bottom:8px">${progBar}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${Object.entries(STATUS_COLORS).filter(([k])=>sByS[k]).map(([k,c])=>
+        `<span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${STATUS_LABELS[k]}: ${sByS[k]}</span>`
+      ).join("")}
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="card">
+      <div class="card-title">Milestones</div>
+      ${milestonesHtml || '<div class="empty-state" style="padding:8px 0">No milestones</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">Features</div>
+      ${featuresHtml}
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="card">
+      <div class="card-title">Checklist</div>
+      <div class="task-list">${tasksHtml}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Open questions</div>
+      ${oqsHtml}
+    </div>
+  </div>`;
+}
+
+function renderMarkdown(md) {
+  let html = md
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/^#### (.+)$/gm,"<h4>$1</h4>")
+    .replace(/^### (.+)$/gm,"<h3>$1</h3>")
+    .replace(/^## (.+)$/gm,(_, t)=>`<h2 id="${t.toLowerCase().replace(/[^a-z0-9]+/g,"-")}">${t}</h2>`)
+    .replace(/^# (.+)$/gm,"<h1>$1</h1>")
+    .replace(/<!--[\s\S]*?-->/g,"")
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g,"<em>$1</em>")
+    .replace(/~~(.+?)~~/g,"<del>$1</del>")
+    .replace(/`([~+ox!?])\s+([\w\s]+)`/g,(_, sym, label)=>{
+      const sm={"+":"done","~":"in_progress","o":"planned","!":"blocked","x":"cut","?":"review"};
+      const s=sm[sym]||"unknown";
+      const c=STATUS_COLORS[s]||"#888";
+      return `<span class="status-badge-inline" style="background:${c}22;color:${c};border:1px solid ${c}44">${STATUS_LABELS[s]||s}</span>`;
+    })
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>')
+    .replace(/^> (.+)$/gm,"<blockquote><p>$1</p></blockquote>")
+    .replace(/^```(\w*)\n([\s\S]*?)^```/gm,(_, lang, code)=>`<pre><code>${code.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&")}</code></pre>`)
+    .replace(/^---$/gm,"<hr>")
+    .replace(/^- \[x\] (.+)$/gm,'<li class="task-item"><span class="task-check">✓</span><span class="task-text done">$1</span></li>')
+    .replace(/^- \[ \] (.+)$/gm,'<li class="task-item"><span class="task-check">○</span><span class="task-text">$1</span></li>')
+    .replace(/^- (.+)$/gm,"<li>$1</li>");
+
+  html = html.replace(/(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)+)/g, table => {
+    const rows = table.trim().split("\n");
+    const headers = rows[0].split("|").map(c=>c.trim()).filter(Boolean);
+    const body = rows.slice(2);
+    const th = headers.map(h=>`<th>${h}</th>`).join("");
+    const tb = body.map(row=>{
+      const cells = row.split("|").map(c=>c.trim()).filter(Boolean);
+      return "<tr>"+cells.map(c=>{
+        const withBadge = c.replace(/`([~+ox!?])\s+([\w\s]+)`/g,(_, sym, label)=>{
+          const sm={"+":"done","~":"in_progress","o":"planned","!":"blocked","x":"cut","?":"review"};
+          const s=sm[sym]||"unknown"; const col=STATUS_COLORS[s]||"#888";
+          return `<span class="status-badge-inline" style="background:${col}22;color:${col};border:1px solid ${col}44">${STATUS_LABELS[s]}</span>`;
+        });
+        return `<td>${withBadge}</td>`;
+      }).join("")+"</tr>";
+    }).join("");
+    return `<table><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
+  });
+
+  html = html.split(/\n{2,}/).map(para=>{
+    const t = para.trim();
+    if (!t) return "";
+    if (/^<(h[1-6]|ul|ol|li|pre|blockquote|hr|table)/.test(t)) return t;
+    if (/<\/(h[1-6])>$/.test(t)) return t;
+    return `<p>${t.replace(/\n/g,"<br>")}</p>`;
+  }).join("\n");
+
+  return html;
+}
+
+function renderPreview() {
+  const el = document.getElementById("previewArea");
+  if (!state.body) { el.innerHTML = '<div class="empty-state">Load a GDD to see the preview.</div>'; return; }
+  const game = state.meta.game || {};
+  const titleHtml = game.title
+    ? `<div style="margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border)">
+        <h1 style="margin-top:0">${game.title}</h1>
+        ${game.tagline ? `<p style="color:var(--text2);font-style:italic">${game.tagline}</p>` : ""}
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+          ${[...(game.genre||[]),...(game.platform||[]),game.engine,game.expected_playtime].filter(Boolean).map(c=>`<span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2)">${c}</span>`).join("")}
+        </div>
+      </div>`
+    : "";
+  el.innerHTML = titleHtml + renderMarkdown(state.body);
+}
+
+function syncEditors() {
+  try {
+    document.getElementById("yamlEditor").value = jsyaml.dump(state.meta, { lineWidth: 120, quotingType: '"' });
+  } catch(e) {}
+  document.getElementById("mdEditor").value = state.body;
+}
+
+function selectSection(id) {
+  state.selectedSection = id;
+  renderSectionList();
+  const sec = state.sections.find(s => s.id === id);
+  if (!sec) return;
+  document.getElementById("editorHint").style.display = "none";
+  const statusOpts = Object.entries(STATUS_LABELS).map(([k, v]) =>
+    `<option value="${k}" ${sec.status === k ? "selected" : ""}>${v}</option>`
+  ).join("");
+  document.getElementById("sectionEditorWrap").innerHTML = `
+  <div class="section-editor-form">
+    <div class="info-card">
+      <div class="info-card-title">Section info</div>
+      <div class="info-row"><span class="info-row-label">Title</span><span class="info-row-val">${sec.title}</span></div>
+      <div class="info-row"><span class="info-row-label">Words</span><span class="info-row-val">${sec.word_count}</span></div>
+      <div class="info-row"><span class="info-row-label">Updated</span><span class="info-row-val">${sec.updated||"not set"}</span></div>
+    </div>
+    <div class="field"><label>Owner</label>
+      <input type="text" value="${sec.owner||""}" onchange="updateSection('${id}','owner',this.value)"/>
+    </div>
+    <div class="field"><label>Status</label>
+      <select onchange="updateSection('${id}','status',this.value)">${statusOpts}</select>
+    </div>
+    <div class="field"><label>Updated date</label>
+      <input type="text" value="${sec.updated||""}" placeholder="YYYY-MM-DD" onchange="updateSection('${id}','updated',this.value)"/>
+    </div>
+    <button class="btn" onclick="jumpToSection('${id}')" style="width:100%">Jump to section in editor</button>
+  </div>`;
+}
+
+function updateSection(id, field, val) {
+  const sec = state.sections.find(s => s.id === id);
+  if (!sec) return;
+  sec[field] = val;
+
+  const metaSec = (state.meta.sections || []).find(s => s.id === id);
+  if (metaSec) metaSec[field] = val;
+
+  if (field === "status" || field === "owner" || field === "updated") {
+    const commentPattern = /<!--\s*status:\s*\w+[^>]*?-->/;
+    const newComment = `<!-- status: ${sec.status} | owner: ${sec.owner||""} | updated: ${sec.updated||""} -->`;
+    const secBody = sec.body_slice;
+    const updated = secBody.replace(commentPattern, newComment);
+    state.body = state.body.replace(secBody, updated);
+    sec.body_slice = updated;
+  }
+
+  renderSectionList();
+  renderDashboard();
+  syncEditors();
+}
+
+function addSection() {
+  const title = document.getElementById("addSecTitle").value.trim();
+  const owner = document.getElementById("addSecOwner").value.trim();
+  const status = document.getElementById("addSecStatus").value;
+  if (!title) { showToast("Title is required"); return; }
+
+  const id = title.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const today = new Date().toISOString().split("T")[0];
+  const newBlock = `\n## ${title}\n\n<!-- status: ${status} | owner: ${owner} | updated: ${today} -->\n\n*Section content goes here.*\n`;
+  state.body += newBlock;
+
+  if (!state.meta.sections) state.meta.sections = [];
+  state.meta.sections.push({ id, title, owner, status });
+
+  state.sections = extractSections(state.body, state.meta);
+  document.getElementById("addSecTitle").value = "";
+  document.getElementById("addSecOwner").value = "";
+
+  refreshAll();
+  showToast("Section added: " + title);
+}
+
+function jumpToSection(id) {
+  const sec = state.sections.find(s => s.id === id);
+  if (!sec) return;
+  const ta = document.getElementById("mdEditor");
+  ta.focus();
+  const idx = state.body.indexOf("## " + sec.title);
+  ta.setSelectionRange(idx, idx + sec.title.length + 3);
+  switchTab("editor", document.querySelector(".tab:nth-child(3)"));
+  showToast("Jumped to section in editor");
+}
+
+function applyMD() {
+  state.body = document.getElementById("mdEditor").value;
+  state.sections = extractSections(state.body, state.meta);
+  state.features = extractFeatures(state.body);
+  state.tasks = extractTasks(state.body);
+  state.open_questions = extractOpenQuestions(state.body);
+  mdDirty = false;
+  renderSectionList();
+  renderDashboard();
+  renderPreview();
+  showToast("Markdown applied");
+}
+
+function applyYAML() {
+  try {
+    const val = document.getElementById("yamlEditor").value;
+    state.meta = jsyaml.load(val) || {};
+    document.getElementById("yamlError").textContent = "";
+    state.milestones = (state.meta.milestones || []).map(m => ({ ...m, days_until: daysUntil(m.target_date) }));
+    yamlDirty = false;
+    refreshAll();
+    showToast("YAML applied");
+  } catch(e) {
+    document.getElementById("yamlError").textContent = "Parse error: " + e.message;
+  }
+}
+
+function formatYAML() {
+  try {
+    const val = document.getElementById("yamlEditor").value;
+    const parsed = jsyaml.load(val);
+    document.getElementById("yamlEditor").value = jsyaml.dump(parsed, { lineWidth: 120, quotingType: '"' });
+    document.getElementById("yamlError").textContent = "";
+  } catch(e) {
+    document.getElementById("yamlError").textContent = "Parse error: " + e.message;
+  }
+}
+
+function copyMD() {
+  navigator.clipboard.writeText(document.getElementById("mdEditor").value).then(() => showToast("Copied to clipboard"));
+}
+
+function exportHTML() {
+  if (!state.meta.game) { showToast("Load a GDD first"); return; }
+  const gameName = (state.meta.game?.title || "gdd").replace(/\s+/g,"_").toLowerCase();
+  const game = state.meta.game || {};
+  const now = new Date().toISOString().split("T")[0];
+  const contentHtml = renderMarkdown(state.body);
+
+  const sTotal = state.sections.length;
+  const sByS = {};
+  for (const s of state.sections) sByS[s.status] = (sByS[s.status]||0)+1;
+  const progBar = Object.entries(STATUS_COLORS).filter(([k])=>sByS[k]).map(([k,c])=>`<div style="width:${(sByS[k]/sTotal*100).toFixed(1)}%;background:${c};height:100%"></div>`).join("");
+  const navLinks = state.sections.map(s=>`<a href="#${s.title.toLowerCase().replace(/[^a-z0-9]+/g,"-")}" style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;font-size:12px;color:#8b919e;text-decoration:none;margin-bottom:2px"><span style="width:7px;height:7px;border-radius:50%;background:${STATUS_COLORS[s.status]||"#555"};flex-shrink:0"></span>${s.title}</a>`).join("");
+  const nextM = (state.milestones||[]).find(m=>m.status!=="done"&&m.days_until!==null);
+
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>${game.title||"GDD"}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}:root{--bg:#0f1117;--bg2:#161b25;--bg3:#1e2533;--border:rgba(255,255,255,0.08);--text:#e8eaf0;--text2:#8b919e;--text3:#555e6e;--accent:#378ADD}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.75;display:flex}.sidebar{width:240px;background:var(--bg2);border-right:1px solid var(--border);padding:20px 16px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0}.content{flex:1;max-width:860px;padding:40px 48px;margin:0 auto}h1{font-size:26px;font-weight:700;color:var(--text);margin:32px 0 14px}h2{font-size:20px;font-weight:600;color:var(--text);margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}h3{font-size:16px;font-weight:600;color:var(--text);margin:20px 0 8px}h4{font-size:13px;font-weight:600;color:var(--text2);margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.05em}p{color:var(--text2);margin:0 0 14px}strong{color:var(--text);font-weight:600}blockquote{border-left:3px solid var(--accent);padding:8px 14px;margin:12px 0;background:rgba(55,138,221,0.08);border-radius:0 6px 6px 0}code{font-family:monospace;font-size:11px;background:var(--bg3);padding:2px 5px;border-radius:4px;border:1px solid var(--border);color:#90caf9}pre{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;margin:12px 0;overflow-x:auto}pre code{background:none;border:none;color:#e0e0e0}table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}th{padding:7px 10px;background:var(--bg3);border-bottom:2px solid rgba(255,255,255,0.13);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;text-align:left}td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}ul{padding-left:18px;margin:8px 0}li{color:var(--text2);margin-bottom:3px}hr{border:none;border-top:1px solid var(--border);margin:24px 0}a{color:var(--accent)}.status-badge-inline{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px}@media(max-width:768px){.sidebar{display:none}.content{padding:24px 20px}}</style></head>
+<body><div class="sidebar"><div style="margin-bottom:16px;font-size:10px;font-weight:600;color:#555e6e;text-transform:uppercase;letter-spacing:0.08em">Progress</div><div style="height:6px;border-radius:3px;background:var(--bg3);overflow:hidden;display:flex;margin-bottom:6px">${progBar}</div>${nextM?`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:16px"><div style="font-size:11px;font-weight:600;color:var(--text)">${nextM.name}</div><div style="font-size:10px;color:#555e6e">${nextM.target_date}</div></div>`:""}<div style="margin-bottom:8px;font-size:10px;font-weight:600;color:#555e6e;text-transform:uppercase;letter-spacing:0.08em">Sections</div>${navLinks}</div>
+<div class="content"><div style="margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border)"><div style="font-size:32px;font-weight:700;color:var(--text);letter-spacing:-0.02em">${game.title||"GDD"}</div>${game.tagline?`<div style="font-size:16px;color:#8b919e;margin-top:6px">${game.tagline}</div>`:""}</div>${contentHtml}<div style="font-size:11px;color:#555e6e;text-align:center;margin-top:40px;padding-top:20px;border-top:1px solid var(--border)">Generated by GDD Living Template &mdash; ${now}</div></div></body></html>`;
+
+  const a = document.createElement("a");
+  a.download = gameName + ".html";
+  a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast("HTML exported");
+}
+
+function exportJSON() {
+  if (!state.meta.game) { showToast("Load a GDD first"); return; }
+  const gameName = (state.meta.game?.title || "gdd").replace(/\s+/g,"_").toLowerCase();
+  const out = {
+    schema: "gdd-status/1.0.0",
+    exported_at: new Date().toISOString(),
+    game: state.meta.game,
+    team: state.meta.team,
+    status: {
+      sections: state.sections.map(s => ({ id:s.id,title:s.title,status:s.status,owner:s.owner,updated:s.updated,word_count:s.word_count })),
+      features: state.features,
+      tasks: { done: state.tasks.filter(t=>t.done).length, total: state.tasks.length, items: state.tasks },
+      milestones: state.milestones,
+      open_questions: state.open_questions
+    }
+  };
+  const a = document.createElement("a");
+  a.download = gameName + "_status.json";
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:"application/json"}));
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast("JSON exported");
+}
+
+function exportCSV() {
+  if (!state.meta.game) { showToast("Load a GDD first"); return; }
+  const gameName = (state.meta.game?.title || "gdd").replace(/\s+/g,"_").toLowerCase();
+  const rows = [
+    "=== SECTIONS ===",
+    "id,title,status,owner,updated,word_count",
+    ...state.sections.map(s => [s.id,`"${s.title}"`,s.status,`"${s.owner||""}"`,s.updated||"",s.word_count].join(",")),
+    "","=== FEATURES ===",
+    "name,status,milestone,priority",
+    ...state.features.map(f => [`"${f.name}"`,f.status,f.milestone||"",f.priority||""].join(",")),
+    "","=== MILESTONES ===",
+    "id,name,target_date,status,days_until",
+    ...(state.milestones||[]).map(m => [m.id,`"${m.name}"`,m.target_date,m.status,m.days_until??""]. join(",")),
+    "","=== OPEN QUESTIONS ===",
+    "id,question,owner,deadline",
+    ...state.open_questions.map(q => [q.id,`"${q.question}"`,`"${q.owner}"`,q.deadline].join(","))
+  ];
+  const a = document.createElement("a");
+  a.download = gameName + "_export.csv";
+  a.href = URL.createObjectURL(new Blob([rows.join("\n")],{type:"text/csv"}));
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast("CSV exported");
+}
+
+function exportMarkdown() {
+  if (!state.meta.game) { showToast("Load a GDD first"); return; }
+  const gameName = (state.meta.game?.title || "gdd").replace(/\s+/g,"_").toLowerCase();
+  const full = serializeGDD();
+  const a = document.createElement("a");
+  a.download = gameName + ".md";
+  a.href = URL.createObjectURL(new Blob([full],{type:"text/markdown"}));
+  a.click(); URL.revokeObjectURL(a.href);
+  showToast("Markdown exported");
+}
+
+function saveGDD() {
+  if (!state.meta.game) { showToast("Load a GDD first"); return; }
+  const entry = {
+    id: Date.now(),
+    name: state.meta.game?.title || "Untitled",
+    saved: new Date().toISOString(),
+    raw: serializeGDD(),
+    sections: state.sections.length,
+    tasks_pct: state.tasks.length > 0 ? Math.round(state.tasks.filter(t=>t.done).length/state.tasks.length*100) : 0
+  };
+  state.saved.unshift(entry);
+  renderSaved();
+  showToast("GDD saved");
+}
+
+function renderSaved() {
+  const el = document.getElementById("savedArea");
+  if (state.saved.length === 0) { el.innerHTML = '<div class="empty-state">No saved GDDs yet.</div>'; return; }
+  el.innerHTML = state.saved.map(s => `
+  <div class="saved-item" onclick="loadSaved(${s.id})">
+    <div class="saved-item-info">
+      <div class="saved-item-name">${s.name}</div>
+      <div class="saved-item-meta">${s.sections} sections &middot; ${s.tasks_pct}% tasks done &middot; ${new Date(s.saved).toLocaleTimeString()}</div>
+    </div>
+    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteSaved(${s.id})">&#10005;</button>
+  </div>`).join("");
+}
+
+function loadSaved(id) {
+  const s = state.saved.find(x => x.id === id);
+  if (!s) return;
+  parseGDD(s.raw);
+  showToast("Loaded: " + s.name);
+}
+
+function deleteSaved(id) {
+  state.saved = state.saved.filter(s => s.id !== id);
+  renderSaved();
+}
+
+function loadExample() {
+  parseGDD(EXAMPLE_GDD);
+  showToast("Example GDD loaded");
+}
+
+function newGDD() {
+  const blank = `---
+gdd_version: "1.0.0"
+last_updated: "${new Date().toISOString().split("T")[0]}"
+game:
+  title: "My Game"
+  tagline: "One sentence description of your game."
+  genre:
+    - action
+  platform:
+    - PC
+  engine: "Your Engine"
+  target_rating: "T"
+  expected_playtime: "X hours"
+  monetization_model: "premium"
+team:
+  studio: "Your Studio"
+  size: "small"
+milestones:
+  - id: M1
+    name: Vertical Slice
+    target_date: "${new Date(Date.now()+90*86400000).toISOString().split("T")[0]}"
+    status: planned
+    description: First playable milestone.
+sections:
+  - id: overview
+    title: Game Overview
+    owner: You
+    status: planned
+---
+
+# My Game - Game Design Document
+
+## Game Overview
+
+<!-- status: planned | owner: You | updated: ${new Date().toISOString().split("T")[0]} -->
+
+Write your game overview here. Describe what the game is, who it's for, and why it's interesting.
+
+| Field | Value |
+|-------|-------|
+| Genre | Action |
+| Platform | PC |
+`;
+  parseGDD(blank);
+  showToast("New GDD created");
+}
+
+function loadFile() { document.getElementById("fileInput").click(); }
+function onFileLoad(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      parseGDD(ev.target.result);
+      showToast("Loaded: " + file.name);
+    } catch(err) { showToast("Load failed: " + err.message); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  if (el) el.classList.add("active");
+  else document.querySelectorAll(".tab")[["dashboard","preview","editor","yaml","saved"].indexOf(name)]?.classList.add("active");
+  const tc = document.getElementById("tab-" + name);
+  if (tc) tc.classList.add("active");
+}
+
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+loadExample();
+</script>
+</body>
+</html>
