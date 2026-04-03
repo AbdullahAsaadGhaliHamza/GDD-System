@@ -1,5 +1,7 @@
 # GDD Living Template System
 
+<img width="1920" height="1080" alt="GddTemplateSystem" src="https://github.com/user-attachments/assets/e6519e51-a5d3-49a8-8e42-928c50204186" />
+
 A Markdown + YAML hybrid Game Design Document system built for version control. Every design decision links to an implementation status. The document is the source of truth - not a static Word file sitting on someone's desktop.
 
 Open `dashboard.html` in a browser. Or run `node tools/build.js --all` to generate all output formats from the command line.
